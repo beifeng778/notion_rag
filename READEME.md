@@ -1,0 +1,217 @@
+当然可以！以下是**纯 Markdown 格式**的完整 `README.md` 内容，你可以直接全选复制，粘贴到任意 Markdown 编辑器或文件中，所有内容都在代码块外，格式清晰、无额外包裹：
+
+```markdown
+# Notion RAG 系统 —— 基于 Moonshot AI Kimi K2 + all-MiniLM-L6-v2
+
+> 在 Windows 本地运行，16GB 内存友好，支持中文 Notion 文档检索与问答。
+
+---
+
+## 📁 项目结构
+
+```
+notion_rag/
+├── .venv/                  # Python 虚拟环境
+├── chroma_db/              # Chroma 向量数据库持久化目录（自动生成）
+├── cmd/
+│   └── embed_server.py     # 嵌入服务：all-MiniLM-L6-v2 模型
+├── server/
+│   ├── go.mod
+│   ├── go.sum
+│   ├── main.go             # Go 主程序（RAG 核心逻辑）
+│   └── notion_rag.exe      # 编译后的可执行文件（Windows）
+└── README.md               # 本文件
+```
+
+---
+
+## ✅ 功能亮点
+
+- ✅ 支持 **Notion Markdown 文档导入**
+- ✅ 使用 **all-MiniLM-L6-v2** 作为嵌入模型（轻量、英文好）
+- ✅ 使用 **Chroma** 作为向量数据库（本地持久化）
+- ✅ 使用 **Moonshot AI Kimi K2** 作为大语言模型（中文强、API 调用）
+- ✅ 完全本地运行（除 LLM 外），数据不出本地
+- ✅ 16GB 内存机器友好，无需 GPU
+
+---
+
+## 🛠️ 运行前准备
+
+### 1. 安装依赖
+
+#### Go 环境
+- 安装 [Go 1.21+](https://go.dev/dl/)
+- 验证：
+  ```bash
+  go version
+  ```
+
+#### Python 环境
+- 安装 [Python 3.9+](https://www.python.org/downloads/windows/)
+- 创建虚拟环境并激活：
+  ```bash
+  cd /d/ai_project/notion_rag/server
+  python -m venv .venv
+  source .venv/Scripts/activate  # Git Bash 用 source
+  ```
+
+#### 安装 Python 依赖
+```bash
+pip install sentence-transformers flask chromadb
+```
+
+#### 获取 Moonshot API Key
+- 注册 [Moonshot AI 平台](https://platform.moonshot.ai/)
+- 创建 API Key，保存为环境变量
+
+---
+
+## 🔧 设置环境变量（Windows）
+
+在终端中设置（每次新终端需重新设置）：
+```bash
+export MOONSHOT_API_KEY="sk-xxx-your-key-here"
+```
+
+或永久设置（推荐）：
+1. 按 `Win + R` → 输入 `sysdm.cpl` → 打开“系统属性”
+2. “高级” → “环境变量”
+3. 用户变量 → 新建 → 变量名：`MOONSHOT_API_KEY`，值：你的密钥
+4. 重启终端生效
+
+---
+
+## 🚀 运行步骤（三步走）
+
+> ⚠️ 请按顺序在三个独立终端窗口中运行以下命令！
+
+### 🔹 终端 1：启动 Chroma 向量数据库
+```bash
+cd /d/ai_project/notion_rag/server
+chroma run --path ../chroma_db
+```
+
+✅ 输出应包含：
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+### 🔹 终端 2：启动 Embedding 服务（all-MiniLM-L6-v2）
+```bash
+cd /d/ai_project/notion_rag/cmd
+source ../../.venv/Scripts/activate
+python embed_server.py
+```
+
+✅ 输出应包含：
+```
+ * Running on http://127.0.0.1:8081
+```
+
+### 🔹 终端 3：运行 Go RAG 程序
+```bash
+cd /d/ai_project/notion_rag/server
+go run main.go
+```
+
+> 或先编译再运行：
+> ```bash
+> go build -o notion_rag.exe
+> ./notion_rag.exe
+> ```
+
+---
+
+## 📥 导入 Notion 文档
+
+1. 在 Notion 中导出页面为 **Markdown & CSV**
+2. 解压后，将所有 `.md` 文件放入：
+   ```
+   notion_rag/notion_docs/
+   ```
+3. 首次运行 Go 程序时会自动导入文档到 Chroma
+
+> 💡 如果更新了文档，请删除 `chroma_db/` 目录，重新运行程序即可重新导入。
+
+---
+
+## 🧪 示例问题
+
+程序默认提问：
+```go
+question := "如何高效进行项目复盘？"
+```
+
+你可以修改 `main.go` 中的 `question` 变量来测试不同问题。
+
+---
+
+## 🔄 更新模型（可选）
+
+### 换成更强中文模型：BAAI/bge-m3
+
+编辑 `cmd/embed_server.py`：
+```python
+# 修改这一行
+model = SentenceTransformer('BAAI/bge-m3')  # 中文更强，约 1.3GB
+```
+
+然后重新运行 `embed_server.py` 即可。
+
+---
+
+## 📊 性能与资源占用
+
+| 组件 | 内存占用 | CPU | 是否需要 GPU |
+|------|----------|-----|--------------|
+| Chroma | ~100MB | 低 | ❌ |
+| Embedding (all-MiniLM-L6-v2) | ~500MB | 中 | ❌ |
+| Kimi K2 (API) | 0MB（远程） | 无 | ❌ |
+| Go 主程序 | ~200MB | 低 | ❌ |
+| **总计** | **< 1GB** | 低 | ❌ |
+
+> ✅ 16GB 内存机器完全无压力！
+
+---
+
+## 📝 注意事项
+
+- **首次运行较慢**（因需嵌入所有文档）；
+- **确保 `chroma_db/` 存在且可写**；
+- **Moonshot API 有调用次数限制**，请合理使用；
+- **如遇端口冲突**，可修改 `embed_server.py` 的端口（如 8082）和 Go 代码中的 `Endpoint`。
+
+---
+
+## 🆘 常见问题
+
+### Q: 报错 `connection refused`？
+A: 检查 Chroma 和 Embedding 服务是否已启动，端口是否被占用。
+
+### Q: Kimi 返回乱码或错误？
+A: 检查 `MOONSHOT_API_KEY` 是否正确，或尝试在 [Moonshot 控制台](https://platform.moonshot.ai/) 测试 API。
+
+### Q: 如何支持更多文件格式？
+A: 当前只支持 `.md`，如需支持 `.txt` 或 `.pdf`，可扩展 `loadMarkdownFiles` 函数。
+
+---
+
+## 🚀 未来扩展建议
+
+- 添加 Web UI（用 Gin/Fiber）
+- 支持命令行输入问题
+- 自动监控 Notion 更新并增量导入
+- 集成 Redis 缓存
+- 支持多用户、权限管理
+
+---
+
+## 🙏 致谢
+
+感谢你使用本项目！如果你觉得有用，欢迎 Star ⭐ 或 Fork 🍴！
+
+如有任何问题，欢迎提交 Issue 或联系我！
+
+> ✨ **让 Notion 成为你随身的知识大脑！**
+```
