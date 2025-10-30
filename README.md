@@ -1,15 +1,32 @@
-当然可以！以下是**纯 Markdown 格式**的完整 `README.md` 内容，你可以直接全选复制，粘贴到任意 Markdown 编辑器或文件中，所有内容都在代码块外，格式清晰、无额外包裹：
+# Notion RAG 系统
 
-```markdown
-# Notion RAG 系统 —— 基于 Moonshot AI Kimi K2 + all-MiniLM-L6-v2
+<div align="center">
 
-> 在 Windows 本地运行，16GB 内存友好，支持中文 Notion 文档检索与问答。
+**基于 Go + LangChain + Chroma + Kimi K2 的智能文档问答系统**
+
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Python Version](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+</div>
 
 ---
 
+## 🎯 项目简介
+
+支持 Notion Markdown 文档的检索增强生成（RAG）系统，在 Windows 本地运行，16GB 内存友好，无需 GPU。
+
+### ✨ 核心特性
+
+- 🚀 **高性能**：Go 语言编写，内存占用低
+- 🧠 **智能问答**：集成 Kimi K2 大语言模型
+- 📚 **文档管理**：自动加载和分块 Notion 文档
+- 🔍 **语义检索**：基于 Chroma 向量数据库的相似度搜索
+- 💾 **本地优先**：除 LLM 外完全本地运行，数据安全
+
 ## 📁 项目结构
 
-```
+```text
 notion_rag/
 ├── .venv/                  # Python 虚拟环境
 ├── chroma_db/              # Chroma 向量数据库持久化目录（自动生成）
@@ -41,27 +58,33 @@ notion_rag/
 ### 1. 安装依赖
 
 #### Go 环境
+
 - 安装 [Go 1.21+](https://go.dev/dl/)
 - 验证：
+
   ```bash
   go version
   ```
 
 #### Python 环境
+
 - 安装 [Python 3.9+](https://www.python.org/downloads/windows/)
-- 创建虚拟环境并激活：
+- 在项目根目录创建虚拟环境：
+
   ```bash
-  cd /d/ai_project/notion_rag/server
   python -m venv .venv
-  source .venv/Scripts/activate  # Git Bash 用 source
+  .venv\Scripts\activate  # Windows
+  # 或 source .venv/Scripts/activate  # Git Bash
   ```
 
 #### 安装 Python 依赖
+
 ```bash
 pip install sentence-transformers flask chromadb
 ```
 
 #### 获取 Moonshot API Key
+
 - 注册 [Moonshot AI 平台](https://platform.moonshot.ai/)
 - 创建 API Key，保存为环境变量
 
@@ -84,12 +107,11 @@ export MOONSHOT_API_KEY="sk-xxx-your-key-here"
 
 ## 🚀 运行步骤（三步走）
 
-> ⚠️ 请按顺序在三个独立终端窗口中运行以下命令！
+> ⚠️ 请在项目根目录（`notion_rag/`）下打开三个终端窗口，按顺序运行以下命令！
 
 ### 🔹 终端 1：启动 Chroma 向量数据库
 ```bash
-cd /d/ai_project/notion_rag/server
-chroma run --path ../chroma_db
+chroma run --path ./chroma_db
 ```
 
 ✅ 输出应包含：
@@ -97,10 +119,9 @@ chroma run --path ../chroma_db
 INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
-### 🔹 终端 2：启动 Embedding 服务（all-MiniLM-L6-v2）
+### 🔹 终端 2：启动 Embedding 服务
 ```bash
-cd /d/ai_project/notion_rag/cmd
-source ../../.venv/Scripts/activate
+cd cmd
 python embed_server.py
 ```
 
@@ -111,14 +132,15 @@ python embed_server.py
 
 ### 🔹 终端 3：运行 Go RAG 程序
 ```bash
-cd /d/ai_project/notion_rag/server
+cd server
+set MOONSHOT_API_KEY=your_api_key_here
 go run main.go
 ```
 
 > 或先编译再运行：
 > ```bash
-> go build -o notion_rag.exe
-> ./notion_rag.exe
+> go build -o notion_rag
+> ./notion_rag
 > ```
 
 ---
@@ -177,23 +199,65 @@ model = SentenceTransformer('BAAI/bge-m3')  # 中文更强，约 1.3GB
 
 ## 📝 注意事项
 
-- **首次运行较慢**（因需嵌入所有文档）；
-- **确保 `chroma_db/` 存在且可写**；
-- **Moonshot API 有调用次数限制**，请合理使用；
-- **如遇端口冲突**，可修改 `embed_server.py` 的端口（如 8082）和 Go 代码中的 `Endpoint`。
+- **工作目录**：所有命令默认在项目根目录（`notion_rag/`）执行
+- **首次运行较慢**：需要下载 Embedding 模型并嵌入所有文档
+- **确保 `chroma_db/` 存在且可写**
+- **Moonshot API 有调用次数限制**，请合理使用
+- **如遇端口冲突**，可修改 `embed_server.py` 的端口（如 8082）和 Go 代码中的 `Endpoint`
 
 ---
 
 ## 🆘 常见问题
 
-### Q: 报错 `connection refused`？
-A: 检查 Chroma 和 Embedding 服务是否已启动，端口是否被占用。
+### Q: 报错 `410 Gone` 或 `connection refused`？
+
+**A:** Chroma 数据库未启动或无法连接。
+
+**解决方案：**
+1. 确保 Chroma 服务已启动：
+   ```bash
+   chroma run --path ../chroma_db
+   ```
+2. 检查端口 8000 是否被占用：
+   ```bash
+   netstat -ano | findstr :8000
+   ```
+3. 测试 Chroma 连接：
+   ```bash
+   curl http://localhost:8000/api/v1/heartbeat
+   ```
+
+### Q: 报错 `请将 Notion Markdown 文件放在 ./notion_docs 目录中`？
+
+**A:** 文档目录不存在或路径不正确。
+
+**解决方案：**
+1. 在项目根目录创建 `notion_docs` 文件夹
+2. 将 Notion 导出的 `.md` 文件放入该目录
+3. 确保从 `server/` 目录运行程序
+
+### Q: Embedding 服务报错？
+
+**A:** Python 依赖未安装或虚拟环境未激活。
+
+**解决方案：**
+```bash
+source .venv/Scripts/activate  # 激活虚拟环境
+pip install sentence-transformers flask chromadb
+```
 
 ### Q: Kimi 返回乱码或错误？
-A: 检查 `MOONSHOT_API_KEY` 是否正确，或尝试在 [Moonshot 控制台](https://platform.moonshot.ai/) 测试 API。
+
+**A:** API Key 配置问题。
+
+**解决方案：**
+1. 检查 `MOONSHOT_API_KEY` 环境变量是否正确设置
+2. 在 [Moonshot 控制台](https://platform.moonshot.ai/) 验证 API Key 有效性
+3. 检查 API 配额是否充足
 
 ### Q: 如何支持更多文件格式？
-A: 当前只支持 `.md`，如需支持 `.txt` 或 `.pdf`，可扩展 `loadMarkdownFiles` 函数。
+
+**A:** 当前只支持 `.md`，如需支持 `.txt` 或 `.pdf`，可扩展 `loadMarkdownFiles` 函数。
 
 ---
 
@@ -213,5 +277,27 @@ A: 当前只支持 `.md`，如需支持 `.txt` 或 `.pdf`，可扩展 `loadMarkd
 
 如有任何问题，欢迎提交 Issue 或联系我！
 
-> ✨ **让 Notion 成为你随身的知识大脑！**
-```
+---
+
+## 📜 许可证
+
+MIT License
+
+---
+
+## 🔗 相关链接
+
+- [Moonshot AI 平台](https://platform.moonshot.ai/)
+- [Chroma 文档](https://docs.trychroma.com/)
+- [LangChain Go](https://github.com/tmc/langchaingo)
+- [Sentence Transformers](https://www.sbert.net/)
+
+---
+
+<div align="center">
+
+**⭐ 如果这个项目对你有帮助，请给个 Star！⭐**
+
+Made with ❤️ by [Your Name]
+
+</div>
