@@ -23,27 +23,83 @@ server/
 └── go.sum
 ```
 
-## 模块说明
+## 系统工作流程
+
+### 📥 初始化阶段（首次运行）
+
+```
+1. loader 模块
+   ↓ 加载 Markdown 文档
+   ↓ 文档分块处理（支持递归分块和 Markdown 分块）
+   ↓ 输出: []schema.Document（文档块列表）
+
+2. embedder 模块
+   ↓ 调用本地 embedding 服务（http://localhost:8081/embed）
+   ↓ 使用 BAAI/bge-m3 模型向量化文档块
+   ↓ 输出: 1024 维向量
+
+3. vectorstore 模块
+   ↓ 调用本地 Chroma 向量数据库（http://localhost:8000）
+   ↓ 存储文档块和对应的向量
+   ↓ 建立向量索引
+```
+
+### 💬 问答阶段（用户提问）
+
+```
+1. 用户输入问题
+   ↓ 例如: "新版宜搭同步方案涉及OA更新字段注意事项"
+
+2. embedder 模块
+   ↓ 将用户问题向量化
+   ↓ 输出: 1024 维查询向量
+
+3. vectorstore 模块
+   ↓ 在 Chroma 中进行相似度搜索（余弦相似度）
+   ↓ 返回 Top-K 个最相关的文档块
+   ↓ 输出: []schema.Document（相关文档列表）
+
+4. llm 模块
+   ↓ 构建 Prompt（包含用户问题 + 检索到的上下文）
+   ↓ 调用 LLM API（支持任何兼容 OpenAI API 的模型）
+   ↓ 输出: 基于上下文的答案
+```
+
+## 模块详细说明
 
 ### embedder (向量化模块)
-- 负责文本向量化
-- 调用本地 embedding 服务
-- 实现 LangChain 的 Embedder 接口
+- **职责**: 负责文本向量化
+- **实现**: 调用本地 embedding 服务（Flask + sentence-transformers）
+- **模型**: BAAI/bge-m3（1024维，中文强）
+- **接口**: 实现 LangChain 的 Embedder 接口
 
 ### loader (文档加载模块)
-- 加载 Notion Markdown 文档
-- 文档分块处理
-- 支持递归分块和 Markdown 分块
+- **职责**: 加载和分块 Markdown 文档
+- **支持格式**: `.md` 文件
+- **分块策略**: 
+  - Markdown 分块（按标题、段落）
+  - 递归分块（按字符数，支持重叠）
+- **输出**: `[]schema.Document`
 
 ### vectorstore (向量数据库模块)
-- 封装 Chroma 向量数据库操作
-- 文档初始化和导入
-- 相似度搜索
+- **职责**: 封装 Chroma 向量数据库操作
+- **功能**:
+  - 文档初始化和导入
+  - 相似度搜索（余弦相似度）
+  - 强制重新导入（`FORCE_REIMPORT`）
+- **存储**: 本地持久化到 `chroma_db/` 目录
 
 ### llm (LLM 客户端模块)
-- 封装 Moonshot Kimi API 调用
-- RAG 问答逻辑
-- Prompt 模板管理
+- **职责**: 封装 LLM API 调用和 RAG 问答逻辑
+- **支持模型**: 任何兼容 OpenAI API 的模型
+  - Moonshot Kimi
+  - OpenAI GPT
+  - DeepSeek
+  - 其他兼容模型
+- **功能**:
+  - Prompt 模板管理
+  - 上下文注入
+  - 流式/非流式响应
 
 ## 环境配置
 
