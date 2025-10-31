@@ -52,7 +52,7 @@ notion_rag/
 
 ## ✅ 功能亮点
 
-- ✅ 支持 **Notion Markdown 文档导入**
+- ✅ 支持 **Notion Markdown 文档导入**（实际上任何 Markdown 文档都可以，其他的文档格式没有测试过）
 - ✅ 使用 **BAAI/bge-m3** 作为 Embedding 模型（中文强、1024维）
 - ✅ 使用 **Chroma** 作为向量数据库（本地持久化）
 - ✅ 支持任何**兼容 OpenAI API 的大语言模型**（Moonshot Kimi、OpenAI GPT、DeepSeek 等）
