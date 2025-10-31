@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**基于 Go + LangChain + Chroma + Kimi K2 的智能文档问答系统**
+**基于 Go + LangChain + Chroma 的智能文档问答系统**
 
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Python Version](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
@@ -19,7 +19,7 @@
 ### ✨ 核心特性
 
 - 🚀 **高性能**：Go 语言编写，内存占用低
-- 🧠 **智能问答**：集成 Kimi K2 大语言模型
+- 🧠 **智能问答**：支持任何兼容 OpenAI API 的大语言模型
 - 📚 **文档管理**：自动加载和分块 Notion 文档
 - 🔍 **语义检索**：基于 Chroma 向量数据库的相似度搜索
 - 💾 **本地优先**：除 LLM 外完全本地运行，数据安全
@@ -30,13 +30,21 @@
 notion_rag/
 ├── .venv/                  # Python 虚拟环境
 ├── chroma_db/              # Chroma 向量数据库持久化目录（自动生成）
+├── notion_docs/            # Notion 文档目录
 ├── cmd/
-│   └── embed_server.py     # 嵌入服务：all-MiniLM-L6-v2 模型
+│   └── embed_server.py     # Embedding 服务：BAAI/bge-m3 模型
 ├── server/
+│   ├── cmd/chat/
+│   │   └── main.go         # 终端对话主程序
+│   ├── pkg/
+│   │   ├── embedder/       # 向量化模块
+│   │   ├── loader/         # 文档加载模块
+│   │   ├── vectorstore/    # 向量数据库模块
+│   │   └── llm/            # LLM 客户端模块
+│   ├── env.sh              # 环境变量配置脚本
+│   ├── README.md           # Server 端详细文档
 │   ├── go.mod
-│   ├── go.sum
-│   ├── main.go             # Go 主程序（RAG 核心逻辑）
-│   └── notion_rag.exe      # 编译后的可执行文件（Windows）
+│   └── go.sum
 └── README.md               # 本文件
 ```
 
@@ -45,103 +53,206 @@ notion_rag/
 ## ✅ 功能亮点
 
 - ✅ 支持 **Notion Markdown 文档导入**
-- ✅ 使用 **all-MiniLM-L6-v2** 作为嵌入模型（轻量、英文好）
+- ✅ 使用 **BAAI/bge-m3** 作为 Embedding 模型（中文强、1024维）
 - ✅ 使用 **Chroma** 作为向量数据库（本地持久化）
-- ✅ 使用 **Moonshot AI Kimi K2** 作为大语言模型（中文强、API 调用）
+- ✅ 支持任何**兼容 OpenAI API 的大语言模型**（Moonshot Kimi、OpenAI GPT、DeepSeek 等）
 - ✅ 完全本地运行（除 LLM 外），数据不出本地
 - ✅ 16GB 内存机器友好，无需 GPU
+- ✅ 终端对话模式，实时问答
 
 ---
 
-## 🛠️ 运行前准备
+## 🛠️ 技术栈与版本
 
-### 1. 安装依赖
+### 核心依赖
 
-#### Go 环境
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| **Go** | 1.24.5+ | 主程序语言 |
+| **Python** | 3.13.3 | Embedding 服务 |
+| **LangChain Go** | v0.1.14 | Go 语言的 LangChain 实现 |
+| **Chroma** | 0.4.24 | 向量数据库 (v1 API) |
+| **sentence-transformers** | 5.1.2 | Embedding 模型库 |
+| **Flask** | 3.1.2 | Embedding 服务框架 |
+| **PyTorch** | 2.9.0+cpu | 深度学习框架 (CPU版本) |
+| **BAAI/bge-m3** | latest | 中文 Embedding 模型 (1024维) |
+| **LLM** | 任意 | 支持任何兼容 OpenAI API 的模型 |
 
-- 安装 [Go 1.21+](https://go.dev/dl/)
-- 验证：
+---
 
-  ```bash
-  go version
-  ```
+## 📦 安装教程
 
-#### Python 环境
+### 步骤 1: 安装 Go 环境
 
-- 安装 [Python 3.9+](https://www.python.org/downloads/windows/)
-- 在项目根目录创建虚拟环境：
+1. 下载并安装 [Go 1.24.5+](https://go.dev/dl/)
+2. 验证安装:
+   ```bash
+   go version
+   ```
+   应该显示: `go version go1.24.5 windows/amd64`
 
-  ```bash
-  python -m venv .venv
-  .venv\Scripts\activate  # Windows
-  # 或 source .venv/Scripts/activate  # Git Bash
-  ```
+### 步骤 2: 安装 Python 环境
 
-#### 安装 Python 依赖
+1. 下载并安装 [Python 3.13+](https://www.python.org/downloads/windows/)
+2. 验证安装:
+   ```bash
+   python --version
+   ```
+   应该显示: `Python 3.13.x` 或更高
+
+### 步骤 3: 创建 Python 虚拟环境
+
+在项目根目录 (`notion_rag/`) 执行:
 
 ```bash
-pip install sentence-transformers flask chromadb
+# 创建虚拟环境
+python -m venv .venv
+
+# 激活虚拟环境
+# Windows CMD:
+.venv\Scripts\activate.bat
+
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+
+# Git Bash / Linux / Mac:
+source .venv/Scripts/activate
 ```
 
-#### 获取 Moonshot API Key
+### 步骤 4: 安装 Python 依赖
 
-- 注册 [Moonshot AI 平台](https://platform.moonshot.ai/)
-- 创建 API Key，保存为环境变量
+激活虚拟环境后,安装依赖:
 
----
-
-## 🔧 设置环境变量（Windows）
-
-在终端中设置（每次新终端需重新设置）：
 ```bash
-export MOONSHOT_API_KEY="sk-xxx-your-key-here"
+pip install --upgrade pip
+pip install sentence-transformers==5.1.2
+pip install flask==3.1.2
+pip install chromadb==0.4.24
 ```
 
-或永久设置（推荐）：
-1. 按 `Win + R` → 输入 `sysdm.cpl` → 打开“系统属性”
-2. “高级” → “环境变量”
-3. 用户变量 → 新建 → 变量名：`MOONSHOT_API_KEY`，值：你的密钥
-4. 重启终端生效
+### 步骤 5: 安装 Chroma 数据库
+
+```bash
+pip install chromadb==0.4.24
+```
+
+⚠️ **重要**: 必须使用 0.4.24 版本,因为 langchaingo 的 chroma 客户端只支持 v1 版本的 API。
+
+验证安装:
+```bash
+chroma --version
+```
+
+### 步骤 6: 下载 Embedding 模型
+
+首次运行 `embed_server.py` 时会自动下载 `BAAI/bge-m3` 模型 (~1.3GB),请耐心等待。
+
+或手动预下载:
+```python
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer('BAAI/bge-m3')
+```
+
+### 步骤 7: 安装 Go 依赖
+
+进入 `server/` 目录:
+```bash
+cd server
+go mod tidy
+```
+
+这会自动下载所有 Go 依赖,包括:
+- `github.com/tmc/langchaingo` - LangChain Go 实现
+- 其他依赖见 `go.mod`
 
 ---
 
-## 🚀 运行步骤（三步走）
+## 🔧 配置环境变量
 
-> ⚠️ 请在项目根目录（`notion_rag/`）下打开三个终端窗口，按顺序运行以下命令！
+编辑 `server/env.sh`,填入你的配置:
 
-### 🔹 终端 1：启动 Chroma 向量数据库
 ```bash
+#!/bin/bash
+
+# LLM 配置 (支持任何兼容 OpenAI API 的模型)
+export OPENAI_API_KEY="sk-your-api-key"
+export OPENAI_MODEL="your-model-name"
+export OPENAI_BASE_URL="https://your-api-base-url"
+
+# 向量数据库配置
+export CHROMA_URL="http://localhost:8000"
+
+# Embedding 服务配置
+export EMBED_ENDPOINT="http://localhost:8081/embed"
+
+# 文档目录配置
+export DOCS_DIR="../notion_docs"
+```
+
+---
+
+## 🚀 运行步骤
+
+> ⚠️ 需要打开 **3 个终端窗口**,按顺序启动服务!
+
+### 终端 1: 启动 Chroma 向量数据库
+
+```bash
+cd notion_rag
 chroma run --path ./chroma_db
 ```
 
-✅ 输出应包含：
+✅ 成功输出:
 ```
 INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
-### 🔹 终端 2：启动 Embedding 服务
+### 终端 2: 启动 Embedding 服务
+
 ```bash
+cd notion_rag
+source .venv/Scripts/activate  # 激活虚拟环境
 cd cmd
 python embed_server.py
 ```
 
-✅ 输出应包含：
+✅ 成功输出:
 ```
  * Running on http://127.0.0.1:8081
 ```
 
-### 🔹 终端 3：运行 Go RAG 程序
+首次运行会下载 `BAAI/bge-m3` 模型 (~2GB),请耐心等待。
+
+### 终端 3: 运行 Go 程序
+
 ```bash
-cd server
-set MOONSHOT_API_KEY=your_api_key_here
-go run main.go
+cd notion_rag/server
+
+# 加载环境变量
+source env.sh
+
+# 运行程序
+cd cmd/chat && go run main.go
 ```
 
-> 或先编译再运行：
-> ```bash
-> go build -o notion_rag
-> ./notion_rag
-> ```
+✅ 成功输出:
+```
+🚀 初始化 Notion RAG 系统...
+📂 加载 Notion 文档...
+✅ 成功加载并分块，共 108 个文本块
+🔗 连接 Chroma 向量数据库...
+📥 检查是否需要导入文档...
+🆕 首次运行，正在导入文档...
+✅ 文档导入完成！
+🧠 初始化 LLM...
+
+=============================================================
+🎉 系统初始化完成！现在可以开始提问了
+💡 输入 'exit' 或 'quit' 退出程序
+=============================================================
+
+❓ 你的问题:
+```
 
 ---
 
@@ -158,40 +269,15 @@ go run main.go
 
 ---
 
-## 🧪 示例问题
-
-程序默认提问：
-```go
-question := "如何高效进行项目复盘？"
-```
-
-你可以修改 `main.go` 中的 `question` 变量来测试不同问题。
-
----
-
-## 🔄 更新模型（可选）
-
-### 换成更强中文模型：BAAI/bge-m3
-
-编辑 `cmd/embed_server.py`：
-```python
-# 修改这一行
-model = SentenceTransformer('BAAI/bge-m3')  # 中文更强，约 1.3GB
-```
-
-然后重新运行 `embed_server.py` 即可。
-
----
-
 ## 📊 性能与资源占用
 
 | 组件 | 内存占用 | CPU | 是否需要 GPU |
 |------|----------|-----|--------------|
 | Chroma | ~100MB | 低 | ❌ |
-| Embedding (all-MiniLM-L6-v2) | ~500MB | 中 | ❌ |
-| Kimi K2 (API) | 0MB（远程） | 无 | ❌ |
+| Embedding (bge-m3) | ~2GB | 中 | ❌ |
+| LLM (API) | 0MB（远程） | 无 | ❌ |
 | Go 主程序 | ~200MB | 低 | ❌ |
-| **总计** | **< 1GB** | 低 | ❌ |
+| **总计** | **~2.3GB** | 低 | ❌ |
 
 > ✅ 16GB 内存机器完全无压力！
 
@@ -200,10 +286,10 @@ model = SentenceTransformer('BAAI/bge-m3')  # 中文更强，约 1.3GB
 ## 📝 注意事项
 
 - **工作目录**：所有命令默认在项目根目录（`notion_rag/`）执行
-- **首次运行较慢**：需要下载 Embedding 模型并嵌入所有文档
+- **首次运行较慢**：需要下载 Embedding 模型 (~2GB) 并嵌入所有文档
 - **确保 `chroma_db/` 存在且可写**
-- **Moonshot API 有调用次数限制**，请合理使用
-- **如遇端口冲突**，可修改 `embed_server.py` 的端口（如 8082）和 Go 代码中的 `Endpoint`
+- **LLM API 可能有调用次数限制**，请合理使用
+- **如遇端口冲突**，可修改 `embed_server.py` 的端口和 `env.sh` 中的配置
 
 ---
 
@@ -246,18 +332,14 @@ source .venv/Scripts/activate  # 激活虚拟环境
 pip install sentence-transformers flask chromadb
 ```
 
-### Q: Kimi 返回乱码或错误？
+### Q: LLM 返回错误？
 
-**A:** API Key 配置问题。
+**A:** 检查 API Key 和模型配置。
 
 **解决方案：**
-1. 检查 `MOONSHOT_API_KEY` 环境变量是否正确设置
-2. 在 [Moonshot 控制台](https://platform.moonshot.ai/) 验证 API Key 有效性
+1. 检查 `OPENAI_API_KEY` 环境变量是否正确设置
+2. 验证 `OPENAI_BASE_URL` 和 `OPENAI_MODEL` 是否正确
 3. 检查 API 配额是否充足
-
-### Q: 如何支持更多文件格式？
-
-**A:** 当前只支持 `.md`，如需支持 `.txt` 或 `.pdf`，可扩展 `loadMarkdownFiles` 函数。
 
 ---
 
@@ -287,10 +369,10 @@ MIT License
 
 ## 🔗 相关链接
 
-- [Moonshot AI 平台](https://platform.moonshot.ai/)
 - [Chroma 文档](https://docs.trychroma.com/)
 - [LangChain Go](https://github.com/tmc/langchaingo)
 - [Sentence Transformers](https://www.sbert.net/)
+- [BAAI/bge-m3 模型](https://huggingface.co/BAAI/bge-m3)
 
 ---
 
@@ -298,6 +380,6 @@ MIT License
 
 **⭐ 如果这个项目对你有帮助，请给个 Star！⭐**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by rainyday
 
 </div>

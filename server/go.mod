@@ -1,8 +1,11 @@
-module server
+module notion_rag
 
 go 1.24.5
 
-require github.com/tmc/langchaingo v0.1.14
+require (
+	github.com/joho/godotenv v1.5.1
+	github.com/tmc/langchaingo v0.1.14
+)
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect

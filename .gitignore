@@ -1,2 +1,5 @@
 /chroma_db
 /notion_docs
+*.sh
+*.log
+.vscode
