@@ -48,18 +48,16 @@ server/
 
 ```
 1. 用户输入问题
-   ↓ 例如: "新版宜搭同步方案涉及OA更新字段注意事项"
+   ↓ 例如: "如何进行项目复盘？"
 
-2. embedder 模块
-   ↓ 将用户问题向量化
-   ↓ 输出: 1024 维查询向量
-
-3. vectorstore 模块
+2. vectorstore 模块
+   ↓ 调用 store.SimilaritySearch(ctx, query, topK)
+   ↓ LangChain 内部自动调用 embedder 将问题向量化
    ↓ 在 Chroma 中进行相似度搜索（余弦相似度）
    ↓ 返回 Top-K 个最相关的文档块
    ↓ 输出: []schema.Document（相关文档列表）
 
-4. llm 模块
+3. llm 模块
    ↓ 构建 Prompt（包含用户问题 + 检索到的上下文）
    ↓ 调用 LLM API（支持任何兼容 OpenAI API 的模型）
    ↓ 输出: 基于上下文的答案
